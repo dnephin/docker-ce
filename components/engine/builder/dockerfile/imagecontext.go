@@ -100,8 +100,8 @@ type getAndMountFunc func(string) (builder.Image, builder.ReleaseableLayer, erro
 // all images so they can be unmounted at the end of the build.
 type imageSources struct {
 	byImageID map[string]*imageMount
+	mounts    []*imageMount
 	getImage  getAndMountFunc
-	cache     pathCache // TODO: remove
 }
 
 func newImageSources(ctx context.Context, options builderOptions) *imageSources {
@@ -130,11 +130,12 @@ func (m *imageSources) Get(idOrRef string) (*imageMount, error) {
 	}
 	im := newImageMount(image, layer)
 	m.byImageID[image.ImageID()] = im
+	m.mounts = append(m.mounts, im)
 	return im, nil
 }
 
 func (m *imageSources) Unmount() (retErr error) {
-	for _, im := range m.byImageID {
+	for _, im := range m.mounts {
 		if err := im.unmount(); err != nil {
 			logrus.Error(err)
 			retErr = err
